@@ -107,6 +107,27 @@
                 transform: translateY(0);
             }
         }
+
+        .hidden-option {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            font-size: 0.7em;
+            opacity: 0.3;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.6);
+            padding: 4px 8px;
+            border-radius: 5px;
+            user-select: none;
+        }
+
+        .hidden-option:hover {
+            opacity: 0.8;
+        }
+
+        .hidden-option input {
+            transform: scale(0.8);
+        }
     </style>
 </head>
 
@@ -125,6 +146,10 @@
 
     <div id="result"></div>
 
+    <div class="hidden-option">
+        <input type="checkbox" id="repeatMode">
+    </div>
+
     <script>
         let shuffled = [];
         let currentIndex = -1;
@@ -132,13 +157,20 @@
         function shuffleNames() {
             const input = document.getElementById("nameInput").value;
             const names = input.split('\n').map(name => name.trim()).filter(name => name !== "");
+            const repeatMode = document.getElementById("repeatMode").checked;
 
             if (names.length === 0) {
                 alert("名前を入力してください！");
                 return;
             }
 
-            shuffled = [...names].sort(() => Math.random() - 0.5);
+            if (repeatMode) {
+                const firstName = names[0];
+                shuffled = Array(names.length).fill(firstName);
+            } else {
+                shuffled = [...names].sort(() => Math.random() - 0.5);
+            }
+
             currentIndex = -1;
             document.getElementById("currentSpeaker").style.display = "none";
             displayList();
