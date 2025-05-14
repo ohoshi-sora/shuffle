@@ -2,7 +2,7 @@
 <html lang="ja">
 
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>発表ルーレット</title>
     <style>
         body {
@@ -26,19 +26,6 @@
             position: relative;
         }
 
-
-        body::before {
-            content: "";
-            position: absolute;
-            top: -20%;
-            left: -20%;
-            width: 140%;
-            height: 140%;
-            background: radial-gradient(circle at center, rgba(0, 200, 255, 0.15), transparent 70%);
-            filter: blur(80px);
-            z-index: 0;
-        }
-
         .roulette-container {
             position: relative;
             width: 100%;
@@ -60,7 +47,6 @@
             font-size: 5em;
             font-weight: 900;
             line-height: 1.2;
-            transform: scale(1);
             transition: transform 1.5s ease-in-out;
         }
 
@@ -73,7 +59,11 @@
         }
 
         .winner-highlight {
-            transform: scale(1.2);
+            transform: scale(1.7);
+        }
+
+        .hidden {
+            display: none;
         }
 
         textarea {
@@ -99,20 +89,45 @@
             z-index: 1;
             position: relative;
         }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.3);
+            /* うっすら黒 */
+            z-index: 2;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .overlay.visible {
+            opacity: 1;
+        }
     </style>
 </head>
 
 <body>
     <textarea id="nameInput" placeholder="ここに名前を改行で入力してください"></textarea>
-    <div>
+    <div id="inputConfirmArea">
+        <button onclick="confirmInput()">入力完了</button>
+    </div>
+
+    <div id="controls" class="hidden">
         <button onclick="startRoulette()">スタート</button>
         <button onclick="resetRoulette()">リセット</button>
     </div>
-    <div class="roulette-container">
+
+    <div class="roulette-container" id="rouletteContainer">
         <div class="roulette-strip" id="rouletteStrip"></div>
     </div>
+
     <script>
         let names = [], remainingNames = [], spinning = false;
+        let itemHeight = 0, centerLine = 0, pad = 0, finalTop = 0;
 
         function shuffleArray(arr) {
             for (let i = arr.length - 1; i > 0; i--) {
@@ -122,27 +137,33 @@
             return arr;
         }
 
-        function startRoulette() {
-            if (spinning) return;
+        function confirmInput() {
             const input = document.getElementById("nameInput").value;
-            if (remainingNames.length === 0) {
-                names = input.split('\n').map(n => n.trim()).filter(n => n);
-                if (!names.length) { alert("名前を入力してください！"); return; }
-                remainingNames = shuffleArray([...names]);
+            names = input.split('\n').map(n => n.trim()).filter(n => n);
+            if (!names.length) {
+                alert("名前を入力してください！");
+                return;
             }
-            spinning = true;
+
+            remainingNames = shuffleArray([...names]);
+            document.getElementById("controls").classList.remove("hidden");
+            buildRoulette(); // 入力完了時に即表示
+        }
+
+        function buildRoulette() {
             const strip = document.getElementById("rouletteStrip");
             strip.innerHTML = '';
 
-            const visible = 5, pad = Math.floor(visible / 2) + 1;
+            const visibleCount = 5;
+            pad = Math.floor(visibleCount / 2) + 1;
             const base = [
                 ...remainingNames.slice(-pad),
                 ...remainingNames,
                 ...remainingNames.slice(0, pad)
             ];
             const reps = 20;
-            const extended = [];
-            for (let i = 0; i < reps; i++) extended.push(...base);
+            const extended = Array.from({ length: reps }, () => base).flat();
+
             extended.forEach((name, i) => {
                 const d = document.createElement('div');
                 d.className = 'roulette-item ' + (i % 2 ? 'white-text' : 'blue-text');
@@ -150,46 +171,71 @@
                 strip.appendChild(d);
             });
 
-            const containerH = document.querySelector('.roulette-container').offsetHeight;
-            const itemH = document.querySelector('.roulette-item').offsetHeight;
-            const centerLine = containerH / 2 - itemH / 2;
+            const containerH = document.getElementById("rouletteContainer").offsetHeight;
+            itemHeight = document.querySelector('.roulette-item').offsetHeight;
+            centerLine = containerH / 2 - itemHeight / 2;
+        }
+
+
+        function startRoulette() {
+            if (spinning) return;
+            if (remainingNames.length === 0) return;
+
+            spinning = true;
+
+            // ⭐ ハイライトを毎回リセット
+            document.querySelectorAll('.roulette-item').forEach(item => {
+                item.classList.remove('winner-highlight');
+            });
+
+            // ⭐ 再構築して中央位置を正しく再設定
+            buildRoulette();
+
+            const strip = document.getElementById("rouletteStrip");
 
             const finalIdx = Math.floor(Math.random() * remainingNames.length);
             const finalName = remainingNames[finalIdx];
-            const finalTop = -(pad + finalIdx) * itemH + centerLine;
-            const totalScroll = reps * base.length * itemH;
+            finalTop = -(pad + finalIdx) * itemHeight + centerLine;
+            const totalScroll = itemHeight * 120;  // ⭐ 以前より多く回す
             const initialTop = finalTop - totalScroll;
-            const runUpDist = itemH * 2;
+            const reverseDist = itemHeight * 2;
 
+            // 初期位置リセット
             strip.style.transition = 'none';
             strip.style.top = `${initialTop}px`;
             strip.getBoundingClientRect();
 
             setTimeout(() => {
-                strip.style.transition = 'top 0.5s ease-out';
-                strip.style.top = `${initialTop - runUpDist}px`;
-            }, 50);
+                // 助走（上）
+                strip.style.transition = 'top 0.4s ease-out';
+                strip.style.top = `${initialTop - reverseDist}px`;
 
-            setTimeout(() => {
-                strip.style.transition = 'none';
-                strip.style.top = `${initialTop}px`;
-                strip.getBoundingClientRect();
-                strip.style.transition = 'top 8s cubic-bezier(0.25,1,0.5,1)';
-                strip.style.top = `${finalTop}px`;
-            }, 600);
+                setTimeout(() => {
+                    // 正方向（下）
+                    strip.style.transition = 'top 0.4s ease-in';
+                    strip.style.top = `${initialTop + reverseDist}px`;
 
-            setTimeout(() => {
-                highlightWinner(finalName);
-                remainingNames = remainingNames.filter(n => n !== finalName);
-                spinning = false;
-                if (!remainingNames.length) {
                     setTimeout(() => {
-                        alert("全員発表が終わりました！リセットします。");
-                        resetRoulette();
-                    }, 1000);
-                }
-            }, 8600);
+                        // ⭐ 回転時間長め＋スピード速め（10秒 + 多くスクロール）
+                        strip.style.transition = 'top 8s cubic-bezier(0.25,1,0.5,1)';
+                        strip.style.top = `${finalTop}px`;
+
+                        setTimeout(() => {
+                            highlightWinner(finalName);
+                            remainingNames = remainingNames.filter(n => n !== finalName);
+                            spinning = false;
+                            if (!remainingNames.length) {
+                                setTimeout(() => {
+                                    alert("全員発表が終わりました！リセットします。");
+                                    resetRoulette();
+                                }, 1000);
+                            }
+                        }, 10000 + 400 + 400);
+                    }, 400);
+                }, 400);
+            }, 100);
         }
+
 
         function highlightWinner(name) {
             document.querySelectorAll('.roulette-item').forEach(item => {
@@ -202,8 +248,8 @@
         function resetRoulette() {
             const input = document.getElementById("nameInput").value;
             names = input.split('\n').map(n => n.trim()).filter(n => n);
-            remainingNames = [];
-            document.getElementById("rouletteStrip").innerHTML = '';
+            remainingNames = [...names];
+            buildRoulette();
             spinning = false;
         }
     </script>
