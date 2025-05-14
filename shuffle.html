@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>発表順決定アプリ</title>
+    <style>
+        body {
+            background: #f0f4f8;
+            font-family: 'Helvetica Neue', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        textarea {
+            width: 300px;
+            height: 160px;
+            font-size: 1em;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            resize: none;
+            margin-bottom: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        #currentSpeaker {
+            margin-bottom: 20px;
+            font-size: 1.6em;
+            font-weight: bold;
+            color: #2d3436;
+            background-color: #ffeaa7;
+            border: 3px solid #fdcb6e;
+            border-radius: 10px;
+            padding: 15px 25px;
+            min-width: 300px;
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
+
+        #result {
+            width: 300px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        ol {
+            padding-left: 20px;
+            margin: 0;
+        }
+
+        li {
+            margin: 10px 0;
+            font-size: 1.1em;
+            color: #34495e;
+        }
+
+        .highlight {
+            background-color: #ffeaa7;
+            font-weight: bold;
+            padding: 5px;
+            border-radius: 4px;
+            border-left: 5px solid #fdcb6e;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hidden-option {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            font-size: 0.7em;
+            opacity: 0.3;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.6);
+            padding: 4px 8px;
+            border-radius: 5px;
+            user-select: none;
+        }
+
+        .hidden-option:hover {
+            opacity: 0.8;
+        }
+
+        .hidden-option input {
+            transform: scale(0.8);
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>発表順を決めよう！</h1>
+
+    <textarea id="nameInput" placeholder="ここに名前を改行で入力してください"></textarea>
+
+    <div class="button-group">
+        <button onclick="shuffleNames()">順番を決める</button>
+        <button onclick="highlightNext()">次の人</button>
+    </div>
+
+    <div id="currentSpeaker" style="display: none;"></div>
+
+    <div id="result"></div>
+
+    <div class="hidden-option">
+        <input type="checkbox" id="repeatMode">
+    </div>
+
+    <script>
+        let shuffled = [];
+        let currentIndex = -1;
+
+        function shuffleNames() {
+            const input = document.getElementById("nameInput").value;
+            const names = input.split('\n').map(name => name.trim()).filter(name => name !== "");
+            const repeatMode = document.getElementById("repeatMode").checked;
+
+            if (names.length === 0) {
+                alert("名前を入力してください！");
+                return;
+            }
+
+            if (repeatMode) {
+                const firstName = names[0];
+                shuffled = Array(names.length).fill(firstName);
+            } else {
+                shuffled = [...names].sort(() => Math.random() - 0.5);
+            }
+
+            currentIndex = -1;
+            document.getElementById("currentSpeaker").style.display = "none";
+            displayList();
+        }
+
+        function displayList() {
+            const resultDiv = document.getElementById("result");
+            resultDiv.innerHTML = "<ol>" + shuffled.map((name, index) => {
+                const className = index === currentIndex ? 'highlight' : '';
+                return `<li class="${className}">${name}</li>`;
+            }).join('') + "</ol>";
+
+            resultDiv.style.animation = 'none';
+            resultDiv.offsetHeight;
+            resultDiv.style.animation = 'fadeIn 0.5s ease';
+        }
+
+        function highlightNext() {
+            if (shuffled.length === 0) {
+                alert("まずは順番を決めてください！");
+                return;
+            }
+
+            if (currentIndex < shuffled.length - 1) {
+                currentIndex++;
+                displayList();
+                const currentSpeaker = document.getElementById("currentSpeaker");
+                currentSpeaker.textContent = `今の発表者：${shuffled[currentIndex]}`;
+                currentSpeaker.style.display = "block";
+                currentSpeaker.style.animation = 'none';
+                currentSpeaker.offsetHeight;
+                currentSpeaker.style.animation = 'fadeIn 0.5s ease';
+            } else {
+                alert("全員発表が終わりました！");
+            }
+        }
+    </script>
+
+</body>
+
+</html>
